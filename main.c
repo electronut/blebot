@@ -34,6 +34,13 @@ APP_PWM_INSTANCE(PWM1,1);
 #define SHUFFLE "Shuffle"
 
 void set_speed(int motor, uint8_t speed);
+void turn(bool left, int tms);
+void set_dir(bool forward);
+
+// current motors speeds
+int motor_speeds[] = {0, 0};
+// current direction
+int curr_dir = true;
 
 // events
 typedef enum _BBEventType {
@@ -73,6 +80,24 @@ void handle_bbevent(BBEvent* bbEvent)
     }
     break;
 
+  case eBBEvent_Left:
+    {
+      turn(true, 500);
+    }
+    break;
+
+  case eBBEvent_Right:
+    {
+      turn(false, 500);
+    }
+    break;
+
+  case eBBEvent_Reverse:
+    {
+      set_dir(!curr_dir);
+    }
+    break;
+
   default:
     break;
   }
@@ -88,11 +113,13 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data,
   // clear events
   bbEvent.pending = false;
 
-  if (strstr((char*)(p_data), RECORD)) {
-
+  if (strstr((char*)(p_data), REWIND)) {
+    bbEvent.pending = true;
+    bbEvent.event = eBBEvent_Left;
   }
-  else if (strstr((char*)(p_data), SHUFFLE)) {
-
+  else if (strstr((char*)(p_data), FORWARD)) {
+    bbEvent.pending = true;
+    bbEvent.event = eBBEvent_Right;
   }
   else if (strstr((char*)(p_data), STOP)) {
     bbEvent.pending = true;
@@ -102,6 +129,10 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data,
     bbEvent.pending = true;
     bbEvent.event = eBBEvent_Start;
     bbEvent.data = 80;
+  }
+  else if (strstr((char*)(p_data), SHUFFLE)) {
+    bbEvent.pending = true;
+    bbEvent.event = eBBEvent_Reverse;
   }
 }
 
@@ -125,9 +156,6 @@ uint32_t pinENB = 4;
 // direction control for motor B
 uint32_t pinIN3 = 5;
 uint32_t pinIN4 = 6;
-// current motors speeds
-int motor_speeds[] = {0, 0};
-
 
 // Function for initializing services that will be used by the application.
 void services_init()
@@ -175,13 +203,23 @@ void turn(bool left, int tms)
     // stop motor 0
     int tmp = motor_speeds[0];
     set_speed(0, 0);
+    set_speed(1, 50);
     // wait
     nrf_delay_ms(tms);
     // reset 
     set_speed(0, tmp);
+    set_speed(1, tmp);
   }
   else {
-
+    // stop motor 1
+    int tmp = motor_speeds[1];
+    set_speed(1, 0);
+    set_speed(0, 50);
+    // wait
+    nrf_delay_ms(tms);
+    // reset 
+    set_speed(0, tmp);
+    set_speed(1, tmp);
   }
 }
 
@@ -204,6 +242,7 @@ void set_dir(bool forward)
     nrf_gpio_pin_clear(pinIN3);
     nrf_gpio_pin_set(pinIN4);
   }
+  curr_dir = forward;
 }
 
 #define APP_TIMER_PRESCALER  0    /**< Value of the RTC1 PRESCALER register. */

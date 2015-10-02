@@ -1,10 +1,8 @@
-![](nrf51-rgb-led.jpg)
+**Work in Progress**
 
-In this project, we will control a common cathode RGB LED connected to
-the Nordic nRF51-DK board, from the Nordic nRFToolbox App. It
-demonstrates PWM and NUS (Nordic UART Service).
+nRF51822 based phone-controlled/autonomous 2WD robot.
 
 Read more at:
 
-http://electronut.in/nrf51-rgb-led-test
+http://electronut.in
 

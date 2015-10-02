@@ -1,10 +1,8 @@
 /* 
    
-   nRF51-RGB-L298/main.c
+   blebot/main.c
 
-   Controlling motors using L298.
-   
-   Demonstrates PWM and NUS (Nordic UART Service).
+   A phone controlled / autonomous robot.
 
    Author: Mahesh Venkitachalam
    Website: electronut.in
@@ -20,6 +18,8 @@
 
 extern ble_nus_t m_nus;                                  
 
+// Create the instance "PWM1" using TIMER1.
+APP_PWM_INSTANCE(PWM1,1);                   
 
 // These are based on default values sent by Nordic nRFToolbox app
 // Modify as neeeded
@@ -33,50 +33,86 @@ extern ble_nus_t m_nus;
 #define RECORD "Rec"
 #define SHUFFLE "Shuffle"
 
-// flip directions
-bool flipA = false;
-bool flipB = false;
+void set_speed(int motor, uint8_t speed);
 
-// min/max motos speeds - PWM duty cycle
-const uint32_t speedMin = 90;
-const uint32_t speedMax = 90;
-// current motor speeds
-uint32_t speedA = 90;
-uint32_t speedB = 90;
+// events
+typedef enum _BBEventType {
+  eBBEvent_Start,
+  eBBEvent_Stop,
+  eBBEvent_Reverse,
+  eBBEvent_Left,
+  eBBEvent_Right,
+} BBEventType;
 
-bool stopMotors = false;
+// structure handle pending events
+typedef struct _BBEvent
+{
+  bool pending;
+  BBEventType event;
+  int data;
+} BBEvent;
 
-bool changed = false;
+BBEvent bbEvent;
+
+// handle event
+void handle_bbevent(BBEvent* bbEvent)
+{
+  switch(bbEvent->event) {
+
+  case eBBEvent_Start:
+    {
+      set_speed(0, bbEvent->data);
+      set_speed(1, bbEvent->data);
+    }
+    break;
+
+  case eBBEvent_Stop:
+    {
+      set_speed(0, 0);
+      set_speed(1, 0);
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  // clear 
+  bbEvent->pending = false;
+}
 
 // Function for handling the data from the Nordic UART Service.
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, 
                              uint16_t length)
 {
+  // clear events
+  bbEvent.pending = false;
+
   if (strstr((char*)(p_data), RECORD)) {
-    flipA = !flipA;
+
   }
   else if (strstr((char*)(p_data), SHUFFLE)) {
-    flipB = !flipB;
+
   }
   else if (strstr((char*)(p_data), STOP)) {
-    stopMotors = true;
+    bbEvent.pending = true;
+    bbEvent.event = eBBEvent_Stop;
   }
   else if (strstr((char*)(p_data), PLAY)) {
-    stopMotors = false;
+    bbEvent.pending = true;
+    bbEvent.event = eBBEvent_Start;
+    bbEvent.data = 80;
   }
-  
-  // set changed flag
-  changed = true;
 }
 
 
 // A flag indicating PWM status.
-static volatile bool ready_flag;            
+static volatile bool pwmReady = false;            
 
 // PWM callback function
 void pwm_ready_callback(uint32_t pwm_id)    
 {
-    ready_flag = true;
+    pwmReady = true;
 }
 
 // enable motor A - PWM for speed control
@@ -89,6 +125,9 @@ uint32_t pinENB = 4;
 // direction control for motor B
 uint32_t pinIN3 = 5;
 uint32_t pinIN4 = 6;
+// current motors speeds
+int motor_speeds[] = {0, 0};
+
 
 // Function for initializing services that will be used by the application.
 void services_init()
@@ -104,21 +143,89 @@ void services_init()
     APP_ERROR_CHECK(err_code);
 }
 
+/* brake: sudden stop of both motors */
+void brake()
+{
+  // set direction A
+  nrf_gpio_pin_set(pinIN1);
+  nrf_gpio_pin_set(pinIN2);
+    
+  // set direction B
+  nrf_gpio_pin_set(pinIN3);
+  nrf_gpio_pin_set(pinIN4);
+}
+
+/* set_speed: set speed for motor 0/1 */
+void set_speed(int motor, uint8_t speed)
+{
+  // error check
+  if (motor < 0 || motor > 1)
+    return;
+
+  // set speed
+  while (app_pwm_channel_duty_set(&PWM1, motor, speed) == NRF_ERROR_BUSY);
+  motor_speeds[motor] = speed; 
+}
+
+
+/* turn: turn in given direction for x milliseconds */
+void turn(bool left, int tms)
+{
+  if(left) {
+    // stop motor 0
+    int tmp = motor_speeds[0];
+    set_speed(0, 0);
+    // wait
+    nrf_delay_ms(tms);
+    // reset 
+    set_speed(0, tmp);
+  }
+  else {
+
+  }
+}
+
+/* direction: change motor direction */
+void set_dir(bool forward)
+{
+  if(forward) {
+    // set direction A
+    nrf_gpio_pin_set(pinIN1);
+    nrf_gpio_pin_clear(pinIN2);
+    // set direction B
+    nrf_gpio_pin_set(pinIN3);
+    nrf_gpio_pin_clear(pinIN4);
+  }
+  else {
+     // set direction A
+    nrf_gpio_pin_clear(pinIN1);
+    nrf_gpio_pin_set(pinIN2);
+    // set direction B
+    nrf_gpio_pin_clear(pinIN3);
+    nrf_gpio_pin_set(pinIN4);
+  }
+}
+
+#define APP_TIMER_PRESCALER  0    /**< Value of the RTC1 PRESCALER register. */
+#define APP_TIMER_MAX_TIMERS 6    /**< Maximum number of simultaneously created timers. */
+#define APP_TIMER_OP_QUEUE_SIZE 4  /**< Size of timer operation queues. */
+
 // Application main function.
 int main(void)
 {
     uint32_t err_code;
 
     // set up timers
-    APP_TIMER_INIT(0, 4, 4, false);
-
+    APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_MAX_TIMERS, 
+                   APP_TIMER_OP_QUEUE_SIZE, false);
+   
     // initlialize BLE
     ble_stack_init();
     gap_params_init();
     services_init();
     advertising_init();
     conn_params_init();
-
+    // start BLE advertizing
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 
@@ -142,99 +249,47 @@ int main(void)
     nrf_gpio_cfg_output(pinIN3);
     nrf_gpio_cfg_output(pinIN4);
     
-    // set direction A
-    nrf_gpio_pin_set(pinIN1);
-    nrf_gpio_pin_clear(pinIN2);
-    
-    // set direction B
-    nrf_gpio_pin_set(pinIN3);
-    nrf_gpio_pin_clear(pinIN4);
+    // set direction
+    set_dir(true);
 
-
-    // Create the instance "PWM1" using TIMER1.
-    APP_PWM_INSTANCE(PWM1,1);                   
-   
     // 2-channel PWM
     app_pwm_config_t pwm1_cfg = 
-      APP_PWM_DEFAULT_CONFIG_2CH(1000L, pinENB, pinENA);
+      APP_PWM_DEFAULT_CONFIG_2CH(1000L, pinENA, pinENB);
 
+    pwm1_cfg.pin_polarity[0] = APP_PWM_POLARITY_ACTIVE_HIGH;
+    pwm1_cfg.pin_polarity[1] = APP_PWM_POLARITY_ACTIVE_HIGH;
+
+    printf("before pwm init\n");
     /* Initialize and enable PWM. */
     err_code = app_pwm_init(&PWM1,&pwm1_cfg,pwm_ready_callback);
     APP_ERROR_CHECK(err_code);
+    printf("after pwm init\n");
+
     app_pwm_enable(&PWM1);
 
-    bool motorsStopped = false;
-    stopMotors = true;
-    changed = true;
+    // wait till PWM is ready
+    //while(!pwmReady);
 
-    // set speed
-    while (app_pwm_channel_duty_set(&PWM1, 0, speedA) == NRF_ERROR_BUSY);
-    while (app_pwm_channel_duty_set(&PWM1, 1, speedB) == NRF_ERROR_BUSY);
+    // set motor speeds
+    //set_speed(0, 80);
+    //set_speed(1, 80);
 
+    // set up LED
+    uint32_t pinLED = 21;
+    nrf_gpio_pin_dir_set(pinLED, NRF_GPIO_PIN_DIR_OUTPUT);
+
+    printf("entering loop\n");
     while(1) {
 
-      // change things only if flags set
-      if (changed) {
-
-        // start/stop - but only when needed
-        if(stopMotors) {
-          if(!motorsStopped) {
-            motorsStopped = true;
-
-            app_pwm_disable(&PWM1);
-            // This is required becauase app_pwm_disable()
-            // has a bug. 
-            // See: 
-            // https://devzone.nordicsemi.com/question/41179/how-to-stop-pwm-and-set-pin-to-clear/
-            nrf_drv_gpiote_out_task_disable(pinENA);
-            nrf_gpio_cfg_output(pinENA);
-            nrf_gpio_pin_clear(pinENA);
-            nrf_drv_gpiote_out_task_disable(pinENB);
-            nrf_gpio_cfg_output(pinENB);
-            nrf_gpio_pin_clear(pinENB);
-          }
-        }
-        else {
-          if(motorsStopped) {
-            motorsStopped = false;
-
-            nrf_drv_gpiote_out_task_enable(pinENA);
-            nrf_drv_gpiote_out_task_enable(pinENB);
-            app_pwm_enable(&PWM1);
-          }
-        }
-
-        // set speed
-        while (app_pwm_channel_duty_set(&PWM1, 0, speedA) == NRF_ERROR_BUSY);
-        while (app_pwm_channel_duty_set(&PWM1, 1, speedB) == NRF_ERROR_BUSY);
-        
-        if(flipA) {
-          // set direction A
-          nrf_gpio_pin_set(pinIN2);
-          nrf_gpio_pin_clear(pinIN1);
-        }
-        else {
-          // set direction A
-          nrf_gpio_pin_set(pinIN1);
-          nrf_gpio_pin_clear(pinIN2);
-        }
-        
-        if(flipB) {
-          // set direction A
-          nrf_gpio_pin_set(pinIN3);
-          nrf_gpio_pin_clear(pinIN4);
-        }
-        else {
-          // set direction A
-          nrf_gpio_pin_set(pinIN4);
-          nrf_gpio_pin_clear(pinIN3);
-        }
-
-        // reset flag
-        changed = false;
+      // execute command if any 
+      if(bbEvent.pending) {
+        handle_bbevent(&bbEvent);
       }
 
-      // delay
-      nrf_delay_ms(100);
+      // flash LED once
+      nrf_gpio_pin_set(pinLED);
+      nrf_delay_ms(200);
+      nrf_gpio_pin_clear(pinLED);
+      nrf_delay_ms(200);
     }
 }

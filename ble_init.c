@@ -27,7 +27,7 @@ void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
     
-    const char deviceName[] = "RGB LED";
+    const char deviceName[] = "BLEBot";
 
     err_code = sd_ble_gap_device_name_set(&sec_mode,
                                           (const uint8_t *) deviceName,

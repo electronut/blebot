@@ -21,6 +21,7 @@
 #include "boards.h"
 #include "pstorage.h"
 #include "pstorage_platform.h"
+#include "nrf_drv_ppi.h"
 
 void gap_params_init(void);
 void ble_stack_init();

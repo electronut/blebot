@@ -1,4 +1,4 @@
-PROJECT_NAME := blebot
+PROJECT_NAME := adc_uart_test
 OUTPUT_FILENAME := nrf51422_xxac_s110
 
 export OUTPUT_FILENAME
@@ -6,7 +6,7 @@ export OUTPUT_FILENAME
 MAKEFILE_NAME := $(MAKEFILE_LIST)
 MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) ) 
 
-SDK_ROOT = /Users/mahesh/Documents/code/nRF51/nRF51_SDK_9.0.0_2e23562
+SDK_ROOT = /Users/mahesh/Documents/code/nRF51/nRF51_SDK_8.1.0_b6ed55f
 TEMPLATE_PATH = $(SDK_ROOT)/components/toolchain/gcc
 SOFTDEVICE_HEX = $(SDK_ROOT)/components/softdevice/s110/hex/s110_softdevice.hex
 
@@ -40,8 +40,7 @@ SIZE    		:= "$(GNU_INSTALL_ROOT)/bin/$(GNU_PREFIX)-size"
 remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-out $(firstword $1),$1))))
 
 #source common to all targets
-C_SOURCE_FILES += \
-$(abspath ../../../main.c) \
+C_SOURCE_FILES += \$(abspath ../../../main.c) \
 $(abspath ../../../ble_init.c) \
 $(SDK_ROOT)/components/libraries/util/app_error.c \
 $(SDK_ROOT)/components/libraries/fifo/app_fifo.c \
@@ -64,49 +63,42 @@ $(SDK_ROOT)/components/ble/common/ble_conn_params.c \
 $(SDK_ROOT)/components/ble/ble_services/ble_dis/ble_dis.c \
 $(SDK_ROOT)/components/ble/ble_services/ble_hrs/ble_hrs.c \
 $(SDK_ROOT)/components/ble/common/ble_srv_common.c \
-$(SDK_ROOT)/components/ble/device_manager/device_manager_peripheral.c \
 $(SDK_ROOT)/components/ble/ble_services/ble_nus/ble_nus.c \
 $(SDK_ROOT)/components/ble/ble_radio_notification/ble_radio_notification.c \
 $(SDK_ROOT)/components/toolchain/system_nrf51.c \
 $(SDK_ROOT)/components/softdevice/common/softdevice_handler/softdevice_handler.c
 
+
+
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.s
 
-#assembly files common to all targets
-LIBS  = $(SDK_ROOT)/external/rtx/source/GCC/libRTX_CM0.a
-
 #includes common to all targets
-INC_PATHS  = -I$(abspath ../../../config)
-INC_PATHS += -I$(SDK_ROOT)/components/libraries/fifo
+INC_PATHS  = -I../../../config
 INC_PATHS += -I$(SDK_ROOT)/components/libraries/util
-INC_PATHS += -I$(SDK_ROOT)/components/libraries/gpiote
-INC_PATHS += -I$(SDK_ROOT)/components/libraries/pwm
-INC_PATHS += -I$(SDK_ROOT)/components/libraries/timer
-INC_PATHS += -I$(SDK_ROOT)/components/libraries/trace
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/hal
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/timer
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/ppi
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/pstorage
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/uart
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/gpiote
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/config
-INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/common
-INC_PATHS += -I$(SDK_ROOT)/components/ble/common
-INC_PATHS += -I$(SDK_ROOT)/components/ble/device_manager
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_services/ble_dis
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_services/ble_nus
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_advertising
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_services/ble_bas
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_services/ble_hrs
-INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_radio_notification
-INC_PATHS += -I$(SDK_ROOT)/components/device
 INC_PATHS += -I$(SDK_ROOT)/components/toolchain/gcc
-INC_PATHS += -I$(SDK_ROOT)/components/toolchain
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/uart
+INC_PATHS += -I$(SDK_ROOT)/components/ble/common
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/common
+INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_advertising
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/trace
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/fifo
 INC_PATHS += -I$(SDK_ROOT)/components/softdevice/s110/headers
-INC_PATHS += -I$(SDK_ROOT)/components/softdevice/common/softdevice_handler
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/config
 INC_PATHS += -I$(SDK_ROOT)/examples/bsp
-INC_PATHS += -I$(SDK_ROOT)/external/rtx/include
+INC_PATHS += -I$(SDK_ROOT)/components/ble/ble_services/ble_nus
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/gpiote
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/pwm
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/pstorage
+INC_PATHS += -I$(SDK_ROOT)/components/toolchain
+INC_PATHS += -I$(SDK_ROOT)/components/device
+INC_PATHS += -I$(SDK_ROOT)/components/softdevice/common/softdevice_handler
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/timer
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/timer
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/hal
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/button
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/ppi
+
 
 OBJECT_DIRECTORY = _build
 LISTING_DIRECTORY = $(OBJECT_DIRECTORY)
@@ -116,14 +108,13 @@ OUTPUT_BINARY_DIRECTORY = $(OBJECT_DIRECTORY)
 BUILD_DIRECTORIES := $(sort $(OBJECT_DIRECTORY) $(OUTPUT_BINARY_DIRECTORY) $(LISTING_DIRECTORY) )
 
 #flags common to all targets
-CFLAGS  = -DBOARD_PCA10028
-CFLAGS += -D__STACK_SIZE=1024
+CFLAGS  = -DBOARD_CUSTOM
+CFLAGS += -DBOARD_E3BO # ExploreEmbedded/Electronut breakout board
 CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DNRF51
 CFLAGS += -DS110
-CFLAGS += -D__HEAP_SIZE=0
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
-CFLAGS += -DRTX
+CFLAGS += -DSWI_DISABLE0
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
 CFLAGS += -Wall -Werror -O3
@@ -140,33 +131,22 @@ LDFLAGS += -mcpu=cortex-m0
 LDFLAGS += -Wl,--gc-sections
 # use newlib in nano version
 LDFLAGS += --specs=nano.specs -lc -lnosys
-# for printf float support
-LDFLAGS += -u _printf_float
 
 # Assembler flags
 ASMFLAGS += -x assembler-with-cpp
-ASMFLAGS += -DBOARD_PCA10028
-ASMFLAGS += -D__STACK_SIZE=1024
+ASMFLAGS += -DBOARD_CUSTOM
 ASMFLAGS += -DSOFTDEVICE_PRESENT
 ASMFLAGS += -DNRF51
 ASMFLAGS += -DS110
-ASMFLAGS += -D__HEAP_SIZE=0
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
-ASMFLAGS += -DRTX
+ASMFLAGS += -DSWI_DISABLE0
 #default target - first one defined
 default: clean nrf51422_xxac_s110
 
 #building all targets
 all: clean
 	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e cleanobj
-	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e nrf51422_xxac_s110
-
-#target for printing all targets
-help:
-	@echo following targets are available:
-	@echo 	nrf51422_xxac_s110
-	@echo 	flash_softdevice
-
+	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e nrf51422_xxac_s110 
 
 C_SOURCE_FILE_NAMES = $(notdir $(C_SOURCE_FILES))
 C_PATHS = $(call remduplicates, $(dir $(C_SOURCE_FILES) ) )
@@ -181,8 +161,7 @@ vpath %.s $(ASM_PATHS)
 
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-nrf51422_xxac_s110: OUTPUT_FILENAME := nrf51422_xxac_s110
-nrf51422_xxac_s110: LINKER_SCRIPT=blebot.ld
+nrf51422_xxac_s110: LINKER_SCRIPT=ble_app_uart_gcc_nrf51.ld
 nrf51422_xxac_s110: $(BUILD_DIRECTORIES) $(OBJECTS)
 	@echo Linking target: $(OUTPUT_FILENAME).out
 	$(NO_ECHO)$(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
@@ -283,3 +262,5 @@ run-debug:
 	$(JLINKD_GDB) $(JLINK_OPTS) $(JLINK_GDB_OPTS) -port $(GDB_PORT_NUMBER)
 
 .PHONY:  flash-jlink flash.jlink erase-all erase-all.jlink run-debug
+
+

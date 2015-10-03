@@ -18,8 +18,8 @@
 
 extern ble_nus_t m_nus;                                  
 
-// Create the instance "PWM1" using TIMER1.
-APP_PWM_INSTANCE(PWM1,1);                   
+// Create the instance "PWM1" using TIMER2.
+APP_PWM_INSTANCE(PWM1,2);                   
 
 // These are based on default values sent by Nordic nRFToolbox app
 // Modify as neeeded

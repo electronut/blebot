@@ -28,4 +28,4 @@ void ble_stack_init();
 void advertising_init();
 void conn_params_init();
 void uart_init();
-
+bool is_connected();

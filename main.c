@@ -15,6 +15,7 @@
  */
 
 #include "ble_init.h"
+#include "distance.h"
 
 extern ble_nus_t m_nus;                                  
 
@@ -133,6 +134,9 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data,
   else if (strstr((char*)(p_data), SHUFFLE)) {
     bbEvent.pending = true;
     bbEvent.event = eBBEvent_Reverse;
+  }
+  else {
+    
   }
 }
 
@@ -320,15 +324,37 @@ int main(void)
     printf("entering loop\n");
     while(1) {
 
-      // execute command if any 
-      if(bbEvent.pending) {
-        handle_bbevent(&bbEvent);
-      }
+      if(is_connected()) {
+        // execute command if any 
+        if(bbEvent.pending) {
+          handle_bbevent(&bbEvent);
+        }
 
-      // flash LED once
-      nrf_gpio_pin_set(pinLED);
-      nrf_delay_ms(200);
-      nrf_gpio_pin_clear(pinLED);
-      nrf_delay_ms(200);
+        // flash LED twice quick
+        nrf_gpio_pin_set(pinLED);
+        nrf_delay_ms(100);
+        nrf_gpio_pin_clear(pinLED);
+        nrf_delay_ms(100);
+        nrf_gpio_pin_set(pinLED);
+        nrf_delay_ms(100);
+        nrf_gpio_pin_clear(pinLED);
+        nrf_delay_ms(100);
+      }
+      else {
+        // get HC-SR04 distance
+        float dist = 0.0;
+        //getDistance(&dist);
+        
+        // send distance via NUS
+        uint8_t str[4];
+        sprintf((char*)str, "%f", dist);
+        ble_nus_string_send(&m_nus, str, strlen((char*)str));
+
+        // flash LED once
+        nrf_gpio_pin_set(pinLED);
+        nrf_delay_ms(500);
+        nrf_gpio_pin_clear(pinLED);
+        nrf_delay_ms(500);
+      }
     }
 }

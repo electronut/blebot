@@ -262,4 +262,8 @@ void advertising_init()
     APP_ERROR_CHECK(err_code);
 }
 
-
+// helper function to check if BLE is connected
+bool is_connected()
+{
+  return (m_conn_handle != BLE_CONN_HANDLE_INVALID);
+}

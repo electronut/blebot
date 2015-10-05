@@ -37,6 +37,7 @@ APP_PWM_INSTANCE(PWM1,2);
 void set_speed(int motor, uint8_t speed);
 void turn(bool left, int tms);
 void set_dir(bool forward);
+void stop();
 
 // current motors speeds
 int motor_speeds[] = {80, 80};
@@ -71,6 +72,7 @@ void handle_bbevent(BBEvent* bbEvent)
     switch(bbEvent->event) {
         case eBBEvent_Start:
         {
+            set_dir(curr_dir);
             set_speed(0, bbEvent->data);
             set_speed(1, bbEvent->data);
         }
@@ -78,8 +80,7 @@ void handle_bbevent(BBEvent* bbEvent)
 
         case eBBEvent_Stop:
         {
-            set_speed(0, 0);
-            set_speed(1, 0);
+            stop();
         }
         break;
 
@@ -174,8 +175,8 @@ void services_init()
     APP_ERROR_CHECK(err_code);
 }
 
-/* brake: sudden stop of both motors */
-void brake()
+/* stop: sudden stop of both motors */
+void stop()
 {
   // set direction A
   nrf_gpio_pin_set(pinIN1);
@@ -256,13 +257,6 @@ void set_dir(bool forward)
 // make a move autonomously
 void auto_move()
 {
-    
-    // if stopped, start
-    if(stopped) {
-        set_speed(0, motor_speeds[0]);
-        set_speed(1, motor_speeds[1]);
-    }
-
     // get HC-SR04 distance
     float dist = 1.0;
     if(getDistance(&dist)) {
@@ -277,7 +271,7 @@ void auto_move()
         if (dist < 15) {
          
             // stop 
-            brake();
+            stop();
 
             // reverse 
             set_dir(false);
@@ -371,8 +365,17 @@ int main(void)
 
     printf("entering loop\n");
 
+    bool prevStateConnected = false;
+    set_dir(true);
+
     while(1) {
         if(is_connected()) {
+
+            // stop if coming from an unconnected state
+            if(!prevStateConnected) {
+                stop();
+            }
+
             // execute command if any 
             if(bbEvent.pending) {
                 handle_bbevent(&bbEvent);
@@ -387,8 +390,18 @@ int main(void)
             nrf_delay_ms(100);
             nrf_gpio_pin_clear(pinLED);
             nrf_delay_ms(100);
+
+            prevStateConnected = true;
         }
         else {            
+
+            // start moving if previous state was connected
+            if (prevStateConnected) {
+                set_dir(true);
+                set_speed(0, 80);
+                set_speed(1, 80);
+            }
+
             // move robot autonomously
             auto_move();
 
@@ -397,6 +410,8 @@ int main(void)
             nrf_delay_ms(500);
             nrf_gpio_pin_clear(pinLED);
             nrf_delay_ms(500);
+
+            prevStateConnected = false;
         }
     }
 }

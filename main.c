@@ -39,9 +39,11 @@ void turn(bool left, int tms);
 void set_dir(bool forward);
 
 // current motors speeds
-int motor_speeds[] = {0, 0};
+int motor_speeds[] = {80, 80};
 // current direction
 int curr_dir = true;
+// currently stopped
+bool stopped = true;
 
 // events
 typedef enum _BBEventType {
@@ -182,6 +184,8 @@ void brake()
   // set direction B
   nrf_gpio_pin_set(pinIN3);
   nrf_gpio_pin_set(pinIN4);
+
+  stopped = true;
 }
 
 /* set_speed: set speed for motor 0/1 */
@@ -194,6 +198,8 @@ void set_speed(int motor, uint8_t speed)
   // set speed
   while (app_pwm_channel_duty_set(&PWM1, motor, speed) == NRF_ERROR_BUSY);
   motor_speeds[motor] = speed; 
+
+  stopped = false;
 }
 
 
@@ -250,17 +256,44 @@ void set_dir(bool forward)
 // make a move autonomously
 void auto_move()
 {
+    
+    // if stopped, start
+    if(stopped) {
+        set_speed(0, motor_speeds[0]);
+        set_speed(1, motor_speeds[1]);
+    }
+
     // get HC-SR04 distance
     float dist = 1.0;
-    getDistance(&dist);
-        
-    // enable to print to serial port
-    //printf("dist = %f cm\n", dist);
-    
-    // send distance via NUS
-    uint8_t str[4];
-    sprintf((char*)str, "%f cm", dist);
-    ble_nus_string_send(&m_nus, str, strlen((char*)str));
+    if(getDistance(&dist)) {
+#if 0         
+        // send distance via NUS
+        uint8_t str[4];
+        sprintf((char*)str, "%f cm", dist);
+        ble_nus_string_send(&m_nus, str, strlen((char*)str));
+#endif
+
+        // obstacle avoidance
+        if (dist < 15) {
+         
+            // stop 
+            brake();
+
+            // reverse 
+            set_dir(false);
+            set_speed(0, 50);
+            set_speed(1, 50);
+            nrf_delay_ms(1000);
+
+            // turn left 
+            turn(true, 500);
+
+            // go
+            set_dir(true);
+            set_speed(0, 80);
+            set_speed(1, 80);
+        }
+    }
 }
 
 
@@ -328,13 +361,6 @@ int main(void)
 
     app_pwm_enable(&PWM1);
 
-    // wait till PWM is ready
-    //while(!pwmReady);
-
-    // set motor speeds
-    //set_speed(0, 80);
-    //set_speed(1, 80);
-
     // set up LED
     uint32_t pinLED = 21;
     nrf_gpio_pin_dir_set(pinLED, NRF_GPIO_PIN_DIR_OUTPUT);
@@ -344,7 +370,7 @@ int main(void)
                                                 
 
     printf("entering loop\n");
- 
+
     while(1) {
         if(is_connected()) {
             // execute command if any 
@@ -362,10 +388,9 @@ int main(void)
             nrf_gpio_pin_clear(pinLED);
             nrf_delay_ms(100);
         }
-        else {
-            
-            // flash LED once
-            //nrf_gpio_pin_toggle(22);
+        else {            
+            // move robot autonomously
+            auto_move();
 
             // flash LED once
             nrf_gpio_pin_set(pinLED);
@@ -373,9 +398,5 @@ int main(void)
             nrf_gpio_pin_clear(pinLED);
             nrf_delay_ms(500);
         }
-
-        // move robot autonomously
-        auto_move();
-
     }
 }

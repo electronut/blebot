@@ -135,9 +135,6 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data,
     bbEvent.pending = true;
     bbEvent.event = eBBEvent_Reverse;
   }
-  else {
-    
-  }
 }
 
 
@@ -253,7 +250,17 @@ void set_dir(bool forward)
 // make a move autonomously
 void auto_move()
 {
-  
+    // get HC-SR04 distance
+    float dist = 1.0;
+    getDistance(&dist);
+        
+    // enable to print to serial port
+    //printf("dist = %f cm\n", dist);
+    
+    // send distance via NUS
+    uint8_t str[4];
+    sprintf((char*)str, "%f cm", dist);
+    ble_nus_string_send(&m_nus, str, strlen((char*)str));
 }
 
 
@@ -357,9 +364,6 @@ int main(void)
         }
         else {
             
-            // move robot autonomously
-            auto_move();
-
             // flash LED once
             //nrf_gpio_pin_toggle(22);
 
@@ -369,5 +373,9 @@ int main(void)
             nrf_gpio_pin_clear(pinLED);
             nrf_delay_ms(500);
         }
+
+        // move robot autonomously
+        auto_move();
+
     }
 }

@@ -132,6 +132,8 @@ LDFLAGS += -mcpu=cortex-m0
 LDFLAGS += -Wl,--gc-sections
 # use newlib in nano version
 LDFLAGS += --specs=nano.specs -lc -lnosys
+# for sprintf
+LDFLAGS += -u _printf_float
 
 # Assembler flags
 ASMFLAGS += -x assembler-with-cpp

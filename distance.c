@@ -8,7 +8,7 @@ static volatile uint32_t tCount = 0;
 // HC-SR04 Trigger pin
 uint32_t pinTrig = 7;
 // HC-SR04 Echo pin
-uint32_t pinEcho = 8;
+uint32_t pinEcho = 23;
 // test pin
 uint32_t pinTest = 22;
 
@@ -52,7 +52,7 @@ bool getDistance(float* dist)
   // dist = duration * speed of sound * 1/2
   // dist in cm = duration in us * 10^-6 * 340.29 * 100 * 1/2
   float distance = duration*0.017;
-  
+
   // check value
   if(distance < 400.0) {
 
@@ -72,7 +72,7 @@ void timer_hcsr04_event_handler(nrf_timer_event_t event_type, void* p_context)
     {
         case NRF_TIMER_EVENT_COMPARE0:
           tCount++;
-          nrf_gpio_pin_toggle(pinTest);
+          //nrf_gpio_pin_toggle(pinTest);
           break;
         
         default:
@@ -100,6 +100,10 @@ void init_dist_measurement(void)
     
   time_ticks = 500;
   
+  // set conversion factor
+  int prescaler = 0;
+  countToUs = 0.0625*time_ticks*(1 << prescaler);
+
   //time_ticks = nrf_drv_timer_ms_to_ticks(&TIMER_HCSR04, 100);
 
   nrf_drv_timer_extended_compare(&TIMER_HCSR04, 

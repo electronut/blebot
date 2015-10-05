@@ -45,19 +45,20 @@ int curr_dir = true;
 
 // events
 typedef enum _BBEventType {
-  eBBEvent_Start,
-  eBBEvent_Stop,
-  eBBEvent_Reverse,
-  eBBEvent_Left,
-  eBBEvent_Right,
+    eBBEvent_Start,
+    eBBEvent_Stop,
+    eBBEvent_Reverse,
+    eBBEvent_Left,
+    eBBEvent_Right,
 } BBEventType;
+
 
 // structure handle pending events
 typedef struct _BBEvent
 {
-  bool pending;
-  BBEventType event;
-  int data;
+    bool pending;
+    BBEventType event;
+    int data;
 } BBEvent;
 
 BBEvent bbEvent;
@@ -65,46 +66,45 @@ BBEvent bbEvent;
 // handle event
 void handle_bbevent(BBEvent* bbEvent)
 {
-  switch(bbEvent->event) {
+    switch(bbEvent->event) {
+        case eBBEvent_Start:
+        {
+            set_speed(0, bbEvent->data);
+            set_speed(1, bbEvent->data);
+        }
+        break;
 
-  case eBBEvent_Start:
-    {
-      set_speed(0, bbEvent->data);
-      set_speed(1, bbEvent->data);
+        case eBBEvent_Stop:
+        {
+            set_speed(0, 0);
+            set_speed(1, 0);
+        }
+        break;
+
+        case eBBEvent_Left:
+        {
+            turn(true, 500);
+        }
+        break;
+
+        case eBBEvent_Right:
+        {
+            turn(false, 500);
+        }
+        break;
+
+        case eBBEvent_Reverse:
+        {
+            set_dir(!curr_dir);
+        }
+        break;
+
+        default:
+            break;
     }
-    break;
 
-  case eBBEvent_Stop:
-    {
-      set_speed(0, 0);
-      set_speed(1, 0);
-    }
-    break;
-
-  case eBBEvent_Left:
-    {
-      turn(true, 500);
-    }
-    break;
-
-  case eBBEvent_Right:
-    {
-      turn(false, 500);
-    }
-    break;
-
-  case eBBEvent_Reverse:
-    {
-      set_dir(!curr_dir);
-    }
-    break;
-
-  default:
-    break;
-  }
-
-  // clear 
-  bbEvent->pending = false;
+    // clear 
+    bbEvent->pending = false;
 }
 
 // Function for handling the data from the Nordic UART Service.
@@ -249,6 +249,14 @@ void set_dir(bool forward)
   curr_dir = forward;
 }
 
+
+// make a move autonomously
+void auto_move()
+{
+  
+}
+
+
 #define APP_TIMER_PRESCALER  0    /**< Value of the RTC1 PRESCALER register. */
 #define APP_TIMER_MAX_TIMERS 6    /**< Maximum number of simultaneously created timers. */
 #define APP_TIMER_OP_QUEUE_SIZE 4  /**< Size of timer operation queues. */
@@ -256,12 +264,12 @@ void set_dir(bool forward)
 // Application main function.
 int main(void)
 {
-    uint32_t err_code;
+  uint32_t err_code;
 
-    // set up timers
-    APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_MAX_TIMERS, 
+  // set up timers
+  APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_MAX_TIMERS, 
                    APP_TIMER_OP_QUEUE_SIZE, false);
-   
+
     // initlialize BLE
     ble_stack_init();
     gap_params_init();
@@ -292,6 +300,9 @@ int main(void)
     nrf_gpio_cfg_output(pinIN3);
     nrf_gpio_cfg_output(pinIN4);
     
+    //nrf_gpio_pin_dir_set(22, NRF_GPIO_PIN_DIR_OUTPUT);
+    //nrf_gpio_pin_clear(22);
+
     // set direction
     set_dir(true);
 
@@ -321,40 +332,42 @@ int main(void)
     uint32_t pinLED = 21;
     nrf_gpio_pin_dir_set(pinLED, NRF_GPIO_PIN_DIR_OUTPUT);
 
+    // initialize distance sensor
+    init_dist_measurement();
+                                                
+
     printf("entering loop\n");
+ 
     while(1) {
+        if(is_connected()) {
+            // execute command if any 
+            if(bbEvent.pending) {
+                handle_bbevent(&bbEvent);
+            }
 
-      if(is_connected()) {
-        // execute command if any 
-        if(bbEvent.pending) {
-          handle_bbevent(&bbEvent);
+            // flash LED twice quick
+            nrf_gpio_pin_set(pinLED);
+            nrf_delay_ms(100);
+            nrf_gpio_pin_clear(pinLED);
+            nrf_delay_ms(100);
+            nrf_gpio_pin_set(pinLED);
+            nrf_delay_ms(100);
+            nrf_gpio_pin_clear(pinLED);
+            nrf_delay_ms(100);
         }
+        else {
+            
+            // move robot autonomously
+            auto_move();
 
-        // flash LED twice quick
-        nrf_gpio_pin_set(pinLED);
-        nrf_delay_ms(100);
-        nrf_gpio_pin_clear(pinLED);
-        nrf_delay_ms(100);
-        nrf_gpio_pin_set(pinLED);
-        nrf_delay_ms(100);
-        nrf_gpio_pin_clear(pinLED);
-        nrf_delay_ms(100);
-      }
-      else {
-        // get HC-SR04 distance
-        float dist = 0.0;
-        //getDistance(&dist);
-        
-        // send distance via NUS
-        uint8_t str[4];
-        sprintf((char*)str, "%f", dist);
-        ble_nus_string_send(&m_nus, str, strlen((char*)str));
+            // flash LED once
+            //nrf_gpio_pin_toggle(22);
 
-        // flash LED once
-        nrf_gpio_pin_set(pinLED);
-        nrf_delay_ms(500);
-        nrf_gpio_pin_clear(pinLED);
-        nrf_delay_ms(500);
-      }
+            // flash LED once
+            nrf_gpio_pin_set(pinLED);
+            nrf_delay_ms(500);
+            nrf_gpio_pin_clear(pinLED);
+            nrf_delay_ms(500);
+        }
     }
 }

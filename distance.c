@@ -9,6 +9,8 @@ static volatile uint32_t tCount = 0;
 uint32_t pinTrig = 7;
 // HC-SR04 Echo pin
 uint32_t pinEcho = 8;
+// test pin
+uint32_t pinTest = 22;
 
 // count to us (micro seconds) conversion factor
 // set in start_timer()
@@ -70,6 +72,7 @@ void timer_hcsr04_event_handler(nrf_timer_event_t event_type, void* p_context)
     {
         case NRF_TIMER_EVENT_COMPARE0:
           tCount++;
+          nrf_gpio_pin_toggle(pinTest);
           break;
         
         default:
@@ -83,6 +86,9 @@ void init_dist_measurement(void)
 {		
   nrf_gpio_pin_dir_set(pinTrig, NRF_GPIO_PIN_DIR_OUTPUT);
   nrf_gpio_pin_dir_set(pinEcho, NRF_GPIO_PIN_DIR_INPUT);
+  nrf_gpio_pin_dir_set(pinTest, NRF_GPIO_PIN_DIR_OUTPUT);
+
+  nrf_gpio_pin_clear(pinTest);
 
   uint32_t time_ticks;
   uint32_t err_code = NRF_SUCCESS;
@@ -94,6 +100,8 @@ void init_dist_measurement(void)
     
   time_ticks = 500;
   
+  //time_ticks = nrf_drv_timer_ms_to_ticks(&TIMER_HCSR04, 100);
+
   nrf_drv_timer_extended_compare(&TIMER_HCSR04, 
                                  NRF_TIMER_CC_CHANNEL0, 
                                  time_ticks, 
@@ -101,8 +109,3 @@ void init_dist_measurement(void)
 
   nrf_drv_timer_enable(&TIMER_HCSR04);  
 }
-
-
-
-
-

@@ -86,13 +86,13 @@ void handle_bbevent(BBEvent* bbEvent)
 
         case eBBEvent_Left:
         {
-            turn(true, 500);
+            turn(false, 500);
         }
         break;
 
         case eBBEvent_Right:
         {
-            turn(false, 500);
+            turn(true, 500);
         }
         break;
 

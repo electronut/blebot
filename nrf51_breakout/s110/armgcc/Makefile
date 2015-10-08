@@ -6,7 +6,8 @@ export OUTPUT_FILENAME
 MAKEFILE_NAME := $(MAKEFILE_LIST)
 MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) ) 
 
-SDK_ROOT = /Users/mahesh/Documents/code/nRF51/nRF51_SDK_8.1.0_b6ed55f
+# change this to match your SDK path
+SDK_ROOT = ../../../../../../../code/nRF51/nRF51_SDK_8.1.0_b6ed55f
 TEMPLATE_PATH = $(SDK_ROOT)/components/toolchain/gcc
 SOFTDEVICE_HEX = $(SDK_ROOT)/components/softdevice/s110/hex/s110_softdevice.hex
 

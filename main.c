@@ -268,7 +268,7 @@ void auto_move()
 #endif
 
         // obstacle avoidance
-        if (dist < 15) {
+        if (dist < 20) {
          
             // stop 
             stop();

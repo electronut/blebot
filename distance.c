@@ -38,13 +38,15 @@ bool getDistance(float* dist)
   // listen for echo and time it
   //       ____________
   // _____|            |___
-  
-  // wait till Echo pin goes high
-  while(!nrf_gpio_pin_read(pinEcho));
+
   // reset counter
   tCount = 0;
-  // wait till Echo pin goes low
-  while(nrf_gpio_pin_read(pinEcho));
+  // wait till Echo pin goes high or counter is too high
+  while(!nrf_gpio_pin_read(pinEcho) && tCount < 1000);
+  // reset counter
+  tCount = 0;
+  // wait till Echo pin goes low or counter is too high
+  while(nrf_gpio_pin_read(pinEcho) && tCount < 1000);
   
   // calculate duration in us
   float duration = countToUs*tCount;
